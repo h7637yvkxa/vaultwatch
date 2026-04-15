@@ -1,35 +1,48 @@
 package vault
 
-import "time"
-
-// ExpiryStatus describes how urgently a lease needs attention.
-type ExpiryStatus int
-
-const (
-	StatusOK      ExpiryStatus = iota // plenty of time remaining
-	StatusWarning                     // within the warn-before window
-	StatusCritical                    // expired or about to expire (<1 min)
+import (
+	"time"
 )
 
-// CheckExpiry evaluates a LeaseInfo against the configured warning threshold
-// and returns the appropriate ExpiryStatus.
-func CheckExpiry(lease LeaseInfo, warnBefore time.Duration) ExpiryStatus {
-	switch {
-	case lease.TTL <= time.Minute:
-		return StatusCritical
-	case lease.TTL <= warnBefore:
-		return StatusWarning
-	default:
-		return StatusOK
-	}
+// LeaseStatus holds the computed expiry state of a single lease.
+type LeaseStatus struct {
+	LeaseID    string
+	Path       string
+	TTL        time.Duration
+	ExpiresAt  time.Time
+	IsExpiring bool
+	IsCritical bool
 }
 
-// FilterExpiring returns only those leases whose status is Warning or Critical.
-func FilterExpiring(leases []LeaseInfo, warnBefore time.Duration) []LeaseInfo {
-	var expiring []LeaseInfo
-	for _, l := range leases {
-		if CheckExpiry(l, warnBefore) != StatusOK {
-			expiring = append(expiring, l)
+// CheckExpiry evaluates a lease against the provided warn and critical
+// thresholds and returns a populated LeaseStatus.
+func CheckExpiry(leaseID, path string, expiresAt time.Time, warnBefore, criticalBefore time.Duration) LeaseStatus {
+	now := time.Now()
+	ttl := expiresAt.Sub(now)
+
+	status := LeaseStatus{
+		LeaseID:   leaseID,
+		Path:      path,
+		TTL:       ttl,
+		ExpiresAt: expiresAt,
+	}
+
+	if ttl <= criticalBefore {
+		status.IsExpiring = true
+		status.IsCritical = true
+	} else if ttl <= warnBefore {
+		status.IsExpiring = true
+	}
+
+	return status
+}
+
+// FilterExpiring returns only those statuses where IsExpiring is true.
+func FilterExpiring(statuses []LeaseStatus) []LeaseStatus {
+	var expiring []LeaseStatus
+	for _, s := range statuses {
+		if s.IsExpiring {
+			expiring = append(expiring, s)
 		}
 	}
 	return expiring
