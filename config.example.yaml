@@ -1,0 +1,35 @@
+# vaultwatch example configuration
+# Copy this file to config.yaml and adjust values for your environment.
+
+vault:
+  # Address of your Vault server
+  address: "http://127.0.0.1:8200"
+
+  # Vault token used to authenticate (prefer VAULT_TOKEN env var in production)
+  token: "root"
+
+  # Optional: path to a custom CA certificate for TLS verification
+  # ca_cert: "/etc/ssl/certs/vault-ca.pem"
+
+monitor:
+  # How often vaultwatch polls Vault for lease information
+  interval: "5m"
+
+  # List of secret paths to monitor
+  paths:
+    - "secret/data/myapp/db-password"
+    - "secret/data/myapp/api-key"
+    - "pki/cert/my-cert"
+
+alerts:
+  # Send alerts when a secret/lease expires within these durations
+  warn_before:
+    - "168h"   # 7 days
+    - "72h"    # 3 days
+    - "24h"    # 1 day
+
+  # Optional: Slack incoming webhook URL
+  # slack_webhook: "https://hooks.slack.com/services/XXX/YYY/ZZZ"
+
+  # Optional: email address to notify
+  # email: "ops@example.com"
