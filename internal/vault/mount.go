@@ -7,8 +7,8 @@ import (
 	"net/http"
 )
 
-// MountInfo holds basic information about a Vault secret engine mount.
-type MountInfo struct {
+// MountEntry represents a single secret engine mount.
+type MountEntry struct {
 	Path        string
 	Type        string
 	Description string
@@ -17,31 +17,26 @@ type MountInfo struct {
 
 // MountChecker lists secret engine mounts from Vault.
 type MountChecker struct {
-	address string
-	token   string
-	client  *http.Client
+	client *Client
 }
 
-// NewMountChecker creates a new MountChecker.
-func NewMountChecker(address, token string, client *http.Client) *MountChecker {
-	if client == nil {
-		client = http.DefaultClient
-	}
-	return &MountChecker{address: address, token: token, client: client}
+// NewMountChecker creates a MountChecker using the provided Client.
+func NewMountChecker(c *Client) *MountChecker {
+	return &MountChecker{client: c}
 }
 
-// ListMounts returns all secret engine mounts from Vault.
-func (m *MountChecker) ListMounts(ctx context.Context) ([]MountInfo, error) {
-	url := fmt.Sprintf("%s/v1/sys/mounts", m.address)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+// ListMounts returns all mounted secret engines.
+func (m *MountChecker) ListMounts(ctx context.Context) ([]MountEntry, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		m.client.address+"/v1/sys/mounts", nil)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
-	req.Header.Set("X-Vault-Token", m.token)
+	req.Header.Set("X-Vault-Token", m.client.token)
 
-	resp, err := m.client.Do(req)
+	resp, err := m.client.http.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
+		return nil, fmt.Errorf("request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -55,17 +50,17 @@ func (m *MountChecker) ListMounts(ctx context.Context) ([]MountInfo, error) {
 		Accessor    string `json:"accessor"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return nil, fmt.Errorf("decode response: %w", err)
+		return nil, fmt.Errorf("decode: %w", err)
 	}
 
-	mounts := make([]MountInfo, 0, len(raw))
+	var entries []MountEntry
 	for path, info := range raw {
-		mounts = append(mounts, MountInfo{
+		entries = append(entries, MountEntry{
 			Path:        path,
 			Type:        info.Type,
 			Description: info.Description,
 			Accessor:    info.Accessor,
 		})
 	}
-	return mounts, nil
+	return entries, nil
 }
