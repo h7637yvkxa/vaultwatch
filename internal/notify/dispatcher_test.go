@@ -59,3 +59,13 @@ func TestDispatcher_Dispatch_CollectsErrors(t *testing.T) {
 		t.Error("second notifier should still be called despite first error")
 	}
 }
+
+func TestDispatcher_Dispatch_NoNotifiers(t *testing.T) {
+	// Dispatching with an empty notifier list should succeed silently.
+	d := notify.NewDispatcherFromNotifiers([]notify.Notifier{})
+
+	alerts := []alert.Alert{{Path: "secret/db", Level: alert.Warning}}
+	if err := d.Dispatch(context.Background(), alerts); err != nil {
+		t.Fatalf("expected no error with no notifiers, got %v", err)
+	}
+}
