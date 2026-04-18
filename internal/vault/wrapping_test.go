@@ -70,3 +70,28 @@ func TestWrappingLookup_HTTPError(t *testing.T) {
 		t.Fatal("expected error for non-200 status")
 	}
 }
+
+func TestWrappingLookup_ZeroTTL(t *testing.T) {
+	payload := map[string]any{
+		"data": map[string]any{
+			"token":         "s.expired",
+			"accessor":      "acc789",
+			"ttl":           0,
+			"creation_time": "2024-01-01T00:00:00Z",
+			"creation_path": "auth/token/create",
+		},
+	}
+	srv := newWrappingTestServer(t, http.StatusOK, payload)
+	defer srv.Close()
+
+	c := newVaultClient(t, srv.URL)
+	wc := NewWrappingChecker(c)
+
+	info, err := wc.Lookup(context.Background(), "s.expired")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if info.TTL != 0 {
+		t.Errorf("expected zero TTL, got %v", info.TTL)
+	}
+}
