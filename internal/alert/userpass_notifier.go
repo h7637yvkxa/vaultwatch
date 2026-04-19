@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/drew/vaultwatch/internal/vault"
 )
@@ -29,11 +30,15 @@ func (n *UserpassNotifier) Notify(users []vault.UserpassUser) error {
 	}
 	fmt.Fprintf(n.w, "[userpass] %d user(s):\n", len(users))
 	for _, u := range users {
-		policies := "(none)"
-		if len(u.Policies) > 0 {
-			policies = fmt.Sprintf("%v", u.Policies)
-		}
-		fmt.Fprintf(n.w, "  - %s  policies=%s\n", u.Username, policies)
+		fmt.Fprintf(n.w, "  - %s  policies=%s\n", u.Username, formatPolicies(u.Policies))
 	}
 	return nil
+}
+
+// formatPolicies returns a human-readable representation of a policy list.
+func formatPolicies(policies []string) string {
+	if len(policies) == 0 {
+		return "(none)"
+	}
+	return strings.Join(policies, ", ")
 }
