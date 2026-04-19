@@ -73,3 +73,17 @@ func TestConnectionCheck_NonOKStatus(t *testing.T) {
 		t.Errorf("expected 503, got %d", status.StatusCode)
 	}
 }
+
+func TestConnectionCheck_CancelledContext(t *testing.T) {
+	srv := newConnectionTestServer(http.StatusOK, "vault-cluster", "1.15.0")
+	defer srv.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	checker := vault.NewConnectionChecker(srv.URL, "test-token", nil)
+	_, err := checker.Check(ctx)
+	if err == nil {
+		t.Error("expected error due to cancelled context")
+	}
+}
