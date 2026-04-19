@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -14,6 +15,12 @@ type HealthStatus struct {
 	Standby     bool
 	Version     string
 	ClusterName string
+}
+
+// healthResponse mirrors the JSON body returned by /v1/sys/health.
+type healthResponse struct {
+	Version     string `json:"version"`
+	ClusterName string `json:"cluster_name"`
 }
 
 // Checker performs health checks against a Vault instance.
@@ -70,6 +77,13 @@ func (c *Checker) Check(ctx context.Context) (*HealthStatus, error) {
 		return status, fmt.Errorf("vault is sealed (HTTP %d)", resp.StatusCode)
 	default:
 		return status, fmt.Errorf("unexpected health status code: %d", resp.StatusCode)
+	}
+
+	// Decode version and cluster name from the response body on success.
+	var body healthResponse
+	if err := json.NewDecoder(resp.Body).Decode(&body); err == nil {
+		status.Version = body.Version
+		status.ClusterName = body.ClusterName
 	}
 
 	return status, nil
