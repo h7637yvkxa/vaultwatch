@@ -48,3 +48,21 @@ func (n *LoginNotifier) Notify(info *vault.LoginInfo) error {
 	_, err := fmt.Fprintln(n.w, strings.Join(lines, "\n"))
 	return err
 }
+
+// NotifyExpiring writes a warning to the writer when a token is close to expiry.
+// threshold specifies how far in advance of expiry the warning should be emitted.
+func (n *LoginNotifier) NotifyExpiring(info *vault.LoginInfo, threshold time.Duration) error {
+	if info == nil {
+		return nil
+	}
+	expiry := info.IssuedAt.Add(time.Duration(info.LeaseDuration) * time.Second)
+	remaining := time.Until(expiry)
+	if remaining > threshold {
+		return nil
+	}
+	_, err := fmt.Fprintf(n.w, "[login] warning: token expires in %s (at %s)\n",
+		remaining.Round(time.Second),
+		expiry.UTC().Format(time.RFC3339),
+	)
+	return err
+}
