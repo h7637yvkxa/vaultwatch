@@ -49,3 +49,21 @@ func TestGitHubNotifier_NilWriter_UsesStdout(t *testing.T) {
 		t.Fatal("expected non-nil notifier")
 	}
 }
+
+func TestGitHubNotifier_SingleTeam(t *testing.T) {
+	var buf bytes.Buffer
+	n := alert.NewGitHubNotifier(&buf)
+	teams := []vault.GitHubTeam{
+		makeGitHubTeam("admin", "admin-policy"),
+	}
+	if err := n.Notify(teams); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "admin") {
+		t.Errorf("expected 'admin' in output, got: %s", out)
+	}
+	if !strings.Contains(out, "1 team") {
+		t.Errorf("expected '1 team' in output, got: %s", out)
+	}
+}
