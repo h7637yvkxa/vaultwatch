@@ -42,3 +42,18 @@ func (n *SealNotifier) Notify(status *vault.SealStatus) error {
 	}
 	return nil
 }
+
+// NotifyMany calls Notify for each status in the slice, collecting all errors.
+// It returns a combined error if any Vault instance is sealed, or nil if all are unsealed.
+func (n *SealNotifier) NotifyMany(statuses []*vault.SealStatus) error {
+	var errs []error
+	for _, s := range statuses {
+		if err := n.Notify(s); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) == 0 {
+		return nil
+	}
+	return fmt.Errorf("%d vault instance(s) sealed: %v", len(errs), errs)
+}
