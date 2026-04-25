@@ -10,3 +10,8 @@ func NewSecretCheckerFromParts(client *http.Client, address, token string) *Secr
 		token:   token,
 	}
 }
+
+// NewSecretCheckerWithDefaults constructs a SecretChecker using the default HTTP client for testing.
+func NewSecretCheckerWithDefaults(address, token string) *SecretChecker {
+	return NewSecretCheckerFromParts(http.DefaultClient, address, token)
+}
